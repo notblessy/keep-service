@@ -1,0 +1,8 @@
+env: "development"
+http_port: "8181"
+mysql:
+  host: "localhost"
+  database: "keep_service"
+  user: "root"
+  password: "root"
+  port: 3306
