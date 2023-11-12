@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -85,6 +86,8 @@ func (h *Handler) CreateBill(c echo.Context) error {
 			Message: fmt.Sprintf("error validate: %s", err.Error()),
 		})
 	}
+
+	req.ExpiredAt = time.Now().Add(7 * 24 * time.Hour)
 
 	err := h.db.Save(&req).Error
 	if err != nil {
