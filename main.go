@@ -19,7 +19,7 @@ func init() {
 
 func main() {
 	mysql := db.NewMysql()
-	mysql.AutoMigrate(&model.Bill{})
+	mysql.AutoMigrate(&model.Bill{}, &model.Share{})
 
 	e := echo.New()
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{

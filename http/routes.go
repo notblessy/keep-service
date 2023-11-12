@@ -23,4 +23,8 @@ func (h *HTTPService) Routes(route *echo.Echo) {
 	bill.GET("", h.handler.FindAllBill)
 	bill.POST("", h.handler.CreateBill)
 	bill.DELETE("/:id", h.handler.DeleteBill)
+
+	share := v1.Group("/shares")
+	share.POST("", h.handler.CreateShare)
+	share.GET("", h.handler.FindAllWithShare)
 }
