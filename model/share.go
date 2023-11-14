@@ -11,6 +11,7 @@ type Share struct {
 	Qty       int       `json:"qty" validate:"required"`
 	Price     int       `json:"price" validate:"required"`
 	CreatedAt time.Time `gorm:"->;<-:create" json:"created_at"`
+	Bill      Bill      `gorm:"->;-:migration;foreignKey:BillID" json:"bill_detail"`
 }
 
 type TotalShareQty struct {

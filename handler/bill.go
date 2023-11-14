@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -201,8 +202,7 @@ func (h *Handler) FindAllWithShare(c echo.Context) error {
 	ownerID := c.QueryParam("owner_id")
 
 	var bills []model.Bill
-
-	err := h.db.Where("owner_id = ?", ownerID).Order("created_at ASC").Preload("Shares").Find(&bills).Error
+	err := h.db.Where("owner_id = ?", ownerID).Order("created_at ASC").Find(&bills).Error
 	if err != nil {
 		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
 			Message: err.Error(),
@@ -218,4 +218,80 @@ func (h *Handler) FindAllWithShare(c echo.Context) error {
 	return utils.Response(c, http.StatusOK, &utils.HTTPResponse{
 		Data: res,
 	})
+}
+
+func (h *Handler) SplitBill(c echo.Context) error {
+	ownerID := c.Param("owner_id")
+
+	if ownerID == "" {
+		return utils.Response(c, http.StatusBadRequest, &utils.HTTPResponse{
+			Message: errors.New("invalid owner id").Error(),
+		})
+	}
+
+	var owner model.User
+	err := h.db.Where("id = ?", ownerID).Preload("Mates.User").Find(&owner).Error
+	if err != nil {
+		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+			Message: err.Error(),
+		})
+	}
+
+	mateIDs := []string{}
+	for _, m := range owner.Mates {
+		mateIDs = append(mateIDs, m.UserID)
+	}
+
+	var mates []model.Mate
+	err = h.db.Table("users").Where("id IN (?)", mateIDs).Preload("Shares.Bill").Find(&mates).Error
+	if err != nil {
+		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+			Message: err.Error(),
+		})
+	}
+
+	split := h.transformToOutputFormat(owner, mates)
+	entity := split.ToEntity()
+
+	err = h.db.Save(&entity).Error
+	if err != nil {
+		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+			Message: err.Error(),
+		})
+	}
+
+	return utils.Response(c, http.StatusCreated, &utils.HTTPResponse{
+		Data: split,
+	})
+}
+
+func (h *Handler) transformToOutputFormat(owner model.User, mates []model.Mate) model.Split {
+	var split model.Split
+
+	split.ID = uuid.New().String()
+	split.OwnerID = owner.ID
+
+	for _, mate := range mates {
+		var splitMate model.SplitMate
+
+		splitMate.ID = mate.ID
+		splitMate.Name = mate.Name
+
+		for _, share := range mate.Shares {
+			var item model.SplitItem
+
+			item.ID = share.BillID
+			item.Name = share.Bill.Name
+			item.Qty = share.Qty
+			item.Price = share.Price
+			item.Total = share.Qty * share.Price
+
+			splitMate.GrandTotal += item.Total
+			splitMate.SplitItems = append(splitMate.SplitItems, item)
+		}
+
+		split.SplitMates = append(split.SplitMates, splitMate)
+	}
+
+	return split
 }

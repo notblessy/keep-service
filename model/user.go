@@ -17,3 +17,9 @@ type UserMate struct {
 	CreatedAt time.Time `gorm:"->;<-:create" json:"created_at"`
 	User      User      `gorm:"->;-:migration;foreignKey:UserID" json:"user_detail"`
 }
+
+type Mate struct {
+	ID     string  `gorm:"primaryKey" json:"id"`
+	Name   string  `json:"name" validate:"required"`
+	Shares []Share `gorm:"->;-:migration" json:"shares"`
+}

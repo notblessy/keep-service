@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/notblessy/model"
 	"github.com/notblessy/utils"
+	"gorm.io/gorm"
 )
 
 func (h *Handler) CreateUser(c echo.Context) error {
@@ -103,12 +104,34 @@ func (h *Handler) FindOneUser(c echo.Context) error {
 func (h *Handler) DeleteMate(c echo.Context) error {
 	id := c.Param("mate_id")
 
-	err := h.db.Where("id = ?", id).Delete(&model.UserMate{}).Error
-	if err != nil {
+	var mate model.UserMate
+	err := h.db.Where("id = ?", id).First(&mate).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
 		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
 			Message: err.Error(),
 		})
 	}
 
-	return utils.Response(c, http.StatusOK, &utils.HTTPResponse{})
+	tx := h.db.Begin()
+
+	err = tx.Where("id = ?", mate.ID).Delete(&model.UserMate{}).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		tx.Rollback()
+		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+			Message: err.Error(),
+		})
+	}
+
+	err = tx.Where("id = ?", mate.UserID).Delete(&model.User{}).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		tx.Rollback()
+		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+			Message: err.Error(),
+		})
+	}
+
+	tx.Commit()
+	return utils.Response(c, http.StatusCreated, &utils.HTTPResponse{
+		Data: id,
+	})
 }

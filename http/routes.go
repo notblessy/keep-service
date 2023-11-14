@@ -18,6 +18,7 @@ func New(h *handler.Handler) *HTTPService {
 
 func (h *HTTPService) Routes(route *echo.Echo) {
 	v1 := route.Group("/v1")
+	v1.POST("/splits/:owner_id", h.handler.SplitBill)
 
 	bill := v1.Group("/bills")
 	bill.GET("", h.handler.FindAllBill)

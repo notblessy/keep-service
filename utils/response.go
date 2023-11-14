@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"encoding/json"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -20,4 +22,9 @@ func Response(c echo.Context, status int, response *HTTPResponse) error {
 	}
 
 	return c.JSON(status, response)
+}
+
+func Dump(v interface{}) string {
+	js, _ := json.Marshal(v)
+	return string(js)
 }
