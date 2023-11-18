@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -270,6 +271,7 @@ func (h *Handler) transformToOutputFormat(owner model.User, mates []model.Mate) 
 
 	split.ID = uuid.New().String()
 	split.OwnerID = owner.ID
+	split.CreatedAt = time.Now()
 
 	for _, mate := range mates {
 		var splitMate model.SplitMate
@@ -294,4 +296,34 @@ func (h *Handler) transformToOutputFormat(owner model.User, mates []model.Mate) 
 	}
 
 	return split
+}
+
+func (h *Handler) FindSplit(c echo.Context) error {
+	id := c.Param("id")
+
+	var split model.SplitEntity
+	err := h.db.Where("id = ?", id).Preload("OwnerDetail.UserBanks").First(&split).Error
+	if err != nil {
+		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+			Message: err.Error(),
+		})
+	}
+
+	res := model.Split{
+		ID:          split.ID,
+		OwnerID:     split.OwnerID,
+		OwnerDetail: split.OwnerDetail,
+		CreatedAt:   split.CreatedAt,
+	}
+
+	err = json.Unmarshal([]byte(split.SplitMates), &res.SplitMates)
+	if err != nil {
+		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+			Message: err.Error(),
+		})
+	}
+
+	return utils.Response(c, http.StatusOK, &utils.HTTPResponse{
+		Data: res,
+	})
 }

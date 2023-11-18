@@ -1,17 +1,24 @@
 package model
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 type SplitEntity struct {
-	ID         string `gorm:"primaryKey" json:"id"`
-	OwnerID    string `json:"owner_id"`
-	SplitMates string `json:"split_mates"`
+	ID          string    `gorm:"primaryKey" json:"id"`
+	OwnerID     string    `json:"owner_id"`
+	OwnerDetail User      `json:"owner_detail" gorm:"foreignKey:OwnerID"`
+	SplitMates  string    `json:"split_mates"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type Split struct {
-	ID         string      `json:"id"`
-	OwnerID    string      `json:"owner_id"`
-	SplitMates []SplitMate `json:"split_mates"`
+	ID          string      `json:"id"`
+	OwnerID     string      `json:"owner_id"`
+	OwnerDetail User        `json:"owner_detail" gorm:"foreignKey:OwnerID"`
+	SplitMates  []SplitMate `json:"split_mates"`
+	CreatedAt   time.Time   `json:"created_at"`
 }
 
 type SplitMate struct {
@@ -30,15 +37,15 @@ type SplitItem struct {
 }
 
 func (s *Split) ToEntity() SplitEntity {
-	json, err := json.Marshal(s)
+	json, err := json.Marshal(s.SplitMates)
 	if err != nil {
 		return SplitEntity{}
 	}
 
 	split := SplitEntity{
-		ID:         s.ID,
-		OwnerID:    s.OwnerID,
-		SplitMates: string(json),
+		ID:          s.ID,
+		OwnerDetail: s.OwnerDetail,
+		SplitMates:  string(json),
 	}
 
 	return split
