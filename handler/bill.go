@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -325,5 +326,54 @@ func (h *Handler) FindSplit(c echo.Context) error {
 
 	return utils.Response(c, http.StatusOK, &utils.HTTPResponse{
 		Data: res,
+	})
+}
+
+func (h *Handler) DeleteBank(c echo.Context) error {
+	id := c.Param("id")
+
+	err := h.db.Where("id = ?", id).Delete(&model.UserBank{}).Error
+	if err != nil {
+		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+			Message: err.Error(),
+		})
+	}
+
+	return utils.Response(c, http.StatusOK, &utils.HTTPResponse{
+		Data: id,
+	})
+}
+
+func (h *Handler) CreateBank(c echo.Context) error {
+	var req model.UserBank
+
+	if err := c.Bind(&req); err != nil {
+		return utils.Response(c, http.StatusBadRequest, &utils.HTTPResponse{
+			Message: fmt.Sprintf("error bind request: %s", err.Error()),
+		})
+	}
+
+	if err := c.Validate(&req); err != nil {
+		return utils.Response(c, http.StatusBadRequest, &utils.HTTPResponse{
+			Message: fmt.Sprintf("error validate: %s", err.Error()),
+		})
+	}
+
+	_, err := strconv.Atoi(req.BankNumber)
+	if err != nil {
+		return utils.Response(c, http.StatusBadRequest, &utils.HTTPResponse{
+			Message: fmt.Sprintf("error validate: %s", err.Error()),
+		})
+	}
+
+	err = h.db.Save(&req).Error
+	if err != nil {
+		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+			Message: err.Error(),
+		})
+	}
+
+	return utils.Response(c, http.StatusCreated, &utils.HTTPResponse{
+		Data: req.ID,
 	})
 }

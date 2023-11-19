@@ -15,6 +15,7 @@ type UserMate struct {
 	ID        string    `gorm:"primaryKey" json:"id"`
 	OwnerID   string    `json:"owner_id" validate:"required"`
 	UserID    string    `json:"user_id"`
+	Me        bool      `json:"me"`
 	CreatedAt time.Time `gorm:"->;<-:create" json:"created_at"`
 	User      User      `gorm:"->;-:migration;foreignKey:UserID" json:"user_detail"`
 }

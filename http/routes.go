@@ -35,4 +35,8 @@ func (h *HTTPService) Routes(route *echo.Echo) {
 	user.POST("/mates", h.handler.CreateMates)
 	user.GET("/:id", h.handler.FindOneUser)
 	user.DELETE("/:mate_id/mate", h.handler.DeleteMate)
+
+	bank := v1.Group("/banks")
+	bank.POST("", h.handler.CreateBank)
+	bank.DELETE("/:id", h.handler.DeleteBank)
 }
