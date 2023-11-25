@@ -26,9 +26,26 @@ func (h *Handler) CreateUser(c echo.Context) error {
 		})
 	}
 
+	var res model.User
+	err := h.db.Where("email = ?", req.Email).Find(&res).Error
+	if err == nil {
+		res.Name = req.Name
+
+		err = h.db.Save(&res).Error
+		if err != nil {
+			return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+				Message: err.Error(),
+			})
+		}
+
+		return utils.Response(c, http.StatusOK, &utils.HTTPResponse{
+			Data: res.ID,
+		})
+	}
+
 	tx := h.db.Begin()
 
-	err := tx.Save(&req).Error
+	err = tx.Save(&req).Error
 	if err != nil {
 		tx.Rollback()
 		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
