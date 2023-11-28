@@ -2,22 +2,16 @@ package config
 
 import (
 	"fmt"
-	"strings"
+	"os"
+	"strconv"
 
+	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 // LoadConfig :nodoc:
 func LoadConfig() {
-	viper.AddConfigPath(".")
-	viper.SetConfigName("config")
-
-	replacer := strings.NewReplacer(".", "_")
-	viper.SetEnvKeyReplacer(replacer)
-
-	viper.AutomaticEnv()
-	err := viper.ReadInConfig()
+	err := godotenv.Load()
 	if err != nil && Env() != "test" {
 		logrus.Warningf("%v", err)
 	}
@@ -25,37 +19,42 @@ func LoadConfig() {
 
 // Env :nodoc:
 func Env() string {
-	return viper.GetString("env")
+	return os.Getenv("ENV")
 }
 
 // HTTPPort :nodoc:
 func HTTPPort() string {
-	return viper.GetString("http_port")
+	return os.Getenv("HTTP_PORT")
 }
 
 // MysqlHost :nodoc:
 func MysqlHost() string {
-	return viper.GetString("mysql.host")
+	return os.Getenv("MYSQL_HOST")
 }
 
 // MysqlUser :nodoc:
 func MysqlUser() string {
-	return viper.GetString("mysql.user")
+	return os.Getenv("MYSQL_USER")
 }
 
 // MysqlPassword :nodoc:
 func MysqlPassword() string {
-	return viper.GetString("mysql.password")
+	return os.Getenv("MYSQL_PASSWORD")
 }
 
 // MysqlDB :nodoc:
 func MysqlDB() string {
-	return viper.GetString("mysql.database")
+	return os.Getenv("MYSQL_DB")
 }
 
 // MysqlPort :nodoc:
 func MysqlPort() int {
-	return viper.GetInt("mysql.port")
+	port, err := strconv.Atoi(os.Getenv("MYSQL_PORT"))
+	if err != nil {
+		return 0
+	}
+
+	return port
 }
 
 // MysqlDSN :nodoc:
@@ -72,20 +71,5 @@ func MysqlDSN() string {
 
 // LogLevel :nodoc:
 func LogLevel() string {
-	return viper.GetString("log_level")
-}
-
-// JwtSecret :nodoc:
-func JwtSecret() string {
-	return viper.GetString("jwt_secret")
-}
-
-// RedisHost :nodoc:
-func RedisHost() string {
-	return viper.GetString("redis_host")
-}
-
-// RedisDB :nodoc:
-func RedisDB() int {
-	return viper.GetInt("redis_db")
+	return os.Getenv("LOG_LEVEL")
 }
