@@ -8,7 +8,7 @@ import (
 type SplitEntity struct {
 	ID          string    `gorm:"primaryKey" json:"id"`
 	OwnerID     string    `json:"owner_id"`
-	OwnerDetail User      `json:"owner_detail" gorm:"foreignKey:OwnerID"`
+	OwnerDetail User      `json:"owner_detail" gorm:"foreignKey:OwnerID;-:migration"`
 	SplitMates  string    `json:"split_mates"`
 	CreatedAt   time.Time `json:"created_at"`
 }
@@ -16,7 +16,7 @@ type SplitEntity struct {
 type Split struct {
 	ID          string      `json:"id"`
 	OwnerID     string      `json:"owner_id"`
-	OwnerDetail User        `json:"owner_detail" gorm:"foreignKey:OwnerID"`
+	OwnerDetail User        `json:"owner_detail" gorm:"foreignKey:OwnerID;-:migration"`
 	SplitMates  []SplitMate `json:"split_mates"`
 	CreatedAt   time.Time   `json:"created_at"`
 }
