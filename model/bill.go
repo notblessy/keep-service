@@ -3,15 +3,16 @@ package model
 import "time"
 
 type Bill struct {
-	ID        string    `gorm:"primaryKey" json:"id" validate:"required"`
-	OwnerID   string    `json:"owner_id" validate:"required"`
-	Name      string    `json:"name" validate:"required"`
-	Qty       int       `json:"qty" validate:"required"`
-	Taken     int       `json:"taken" gorm:"-:all"`
-	Price     int       `json:"price" validate:"required"`
-	ExpiredAt time.Time `gorm:"->;<-:create" json:"expired_at"`
-	CreatedAt time.Time `gorm:"->;<-:create" json:"created_at"`
-	Shares    []Share   `gorm:"->;-:migration" json:"shares"`
+	ID           string    `gorm:"primaryKey" json:"id" validate:"required"`
+	OwnerID      string    `json:"owner_id" validate:"required"`
+	Name         string    `json:"name" validate:"required"`
+	Qty          int       `json:"qty" validate:"required"`
+	Taken        int       `json:"taken" gorm:"-:all"`
+	Price        int       `json:"price" validate:"required"`
+	SplitPayment bool      `json:"split_payment"`
+	ExpiredAt    time.Time `gorm:"->;<-:create" json:"expired_at"`
+	CreatedAt    time.Time `gorm:"->;<-:create" json:"created_at"`
+	Shares       []Share   `gorm:"->;-:migration" json:"shares"`
 }
 
 type AssignedBillResponse struct {

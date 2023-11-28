@@ -231,9 +231,12 @@ func (h *Handler) SplitBill(c echo.Context) error {
 		})
 	}
 
+	tx := h.db.Begin()
+
 	var owner model.User
-	err := h.db.Where("id = ?", ownerID).Preload("Mates.User").Find(&owner).Error
+	err := tx.Where("id = ?", ownerID).Preload("Mates.User").Find(&owner).Error
 	if err != nil {
+		tx.Rollback()
 		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
 			Message: err.Error(),
 		})
@@ -245,8 +248,9 @@ func (h *Handler) SplitBill(c echo.Context) error {
 	}
 
 	var mates []model.Mate
-	err = h.db.Table("users").Where("id IN (?)", mateIDs).Preload("Shares.Bill").Find(&mates).Error
+	err = tx.Table("users").Where("id IN (?)", mateIDs).Preload("Shares.Bill").Find(&mates).Error
 	if err != nil {
+		tx.Rollback()
 		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
 			Message: err.Error(),
 		})
@@ -255,13 +259,31 @@ func (h *Handler) SplitBill(c echo.Context) error {
 	split := h.transformToOutputFormat(owner, mates)
 	entity := split.ToEntity()
 
-	err = h.db.Save(&entity).Error
+	err = tx.Save(&entity).Error
 	if err != nil {
+		tx.Rollback()
 		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
 			Message: err.Error(),
 		})
 	}
 
+	err = tx.Where("owner_id = ?", owner.ID).Delete(&model.Share{}).Error
+	if err != nil {
+		tx.Rollback()
+		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+			Message: err.Error(),
+		})
+	}
+
+	err = tx.Where("owner_id = ?", owner.ID).Delete(&model.Bill{}).Error
+	if err != nil {
+		tx.Rollback()
+		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+			Message: err.Error(),
+		})
+	}
+
+	tx.Commit()
 	return utils.Response(c, http.StatusCreated, &utils.HTTPResponse{
 		Data: split,
 	})
@@ -375,5 +397,110 @@ func (h *Handler) CreateBank(c echo.Context) error {
 
 	return utils.Response(c, http.StatusCreated, &utils.HTTPResponse{
 		Data: req.ID,
+	})
+}
+
+func (h *Handler) BulkCreateShare(c echo.Context) error {
+	var reqs model.BulkShare
+
+	if err := c.Bind(&reqs); err != nil {
+		return utils.Response(c, http.StatusBadRequest, &utils.HTTPResponse{
+			Message: fmt.Sprintf("error bind request: %s", err.Error()),
+		})
+	}
+
+	if err := c.Validate(&reqs); err != nil {
+		return utils.Response(c, http.StatusBadRequest, &utils.HTTPResponse{
+			Message: fmt.Sprintf("error validate: %s", err.Error()),
+		})
+	}
+
+	reqType := c.QueryParam("type")
+
+	tx := h.db.Begin()
+
+	if reqType == "SUB" {
+		err := h.db.Where("bill_id = ?", reqs.BillID).Delete(&model.Share{}).Error
+		if err != nil {
+			tx.Rollback()
+			return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+				Message: err.Error(),
+			})
+		}
+
+		tx.Commit()
+		return utils.Response(c, http.StatusCreated, &utils.HTTPResponse{
+			Data: reqs.BillID,
+		})
+	}
+
+	var bill model.Bill
+	err := tx.Where("id = ?", reqs.BillID).First(&bill).Error
+	if err != nil {
+		tx.Rollback()
+		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+			Message: err.Error(),
+		})
+	}
+
+	var mateIDs []string
+	for _, m := range reqs.Mates {
+		mateIDs = append(mateIDs, m.MateID)
+	}
+
+	var share []model.Share
+	err = tx.Where("bill_id = ? AND mate_id IN (?)", bill.ID, mateIDs).Find(&share).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		tx.Rollback()
+		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+			Message: err.Error(),
+		})
+	}
+
+	if len(share) > 0 {
+		err := h.db.Where("bill_id = ?", reqs.BillID).Delete(&model.Share{}).Error
+		if err != nil {
+			tx.Rollback()
+			return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+				Message: err.Error(),
+			})
+		}
+	}
+
+	totalMate := len(reqs.Mates)
+
+	for _, mate := range reqs.Mates {
+		shareReq := model.Share{
+			ID:       uuid.NewString(),
+			OwnerID:  reqs.OwnerID,
+			BillID:   reqs.BillID,
+			MateID:   mate.MateID,
+			MateName: mate.MateName,
+			Qty:      1,
+			Price:    bill.Price / totalMate,
+		}
+
+		err = tx.Save(&shareReq).Error
+		if err != nil {
+			tx.Rollback()
+			return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+				Message: err.Error(),
+			})
+		}
+	}
+
+	bill.SplitPayment = true
+
+	err = tx.Save(&bill).Error
+	if err != nil {
+		tx.Rollback()
+		return utils.Response(c, http.StatusInternalServerError, &utils.HTTPResponse{
+			Message: err.Error(),
+		})
+	}
+
+	tx.Commit()
+	return utils.Response(c, http.StatusCreated, &utils.HTTPResponse{
+		Data: reqs.BillID,
 	})
 }

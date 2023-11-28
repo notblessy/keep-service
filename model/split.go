@@ -44,6 +44,7 @@ func (s *Split) ToEntity() SplitEntity {
 
 	split := SplitEntity{
 		ID:          s.ID,
+		OwnerID:     s.OwnerID,
 		OwnerDetail: s.OwnerDetail,
 		SplitMates:  string(json),
 	}

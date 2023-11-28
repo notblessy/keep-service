@@ -27,7 +27,7 @@ func (h *Handler) CreateUser(c echo.Context) error {
 	}
 
 	var res model.User
-	err := h.db.Where("email = ?", req.Email).Find(&res).Error
+	err := h.db.Where("email = ?", req.Email).First(&res).Error
 	if err == nil {
 		res.Name = req.Name
 

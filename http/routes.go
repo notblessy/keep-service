@@ -29,6 +29,7 @@ func (h *HTTPService) Routes(route *echo.Echo) {
 	share := v1.Group("/shares")
 	share.POST("", h.handler.CreateShare)
 	share.GET("", h.handler.FindAllWithShare)
+	share.POST("/bulk", h.handler.BulkCreateShare)
 
 	user := v1.Group("/users")
 	user.POST("", h.handler.CreateUser)

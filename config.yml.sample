@@ -4,5 +4,5 @@ mysql:
   host: "localhost"
   database: "keep_service"
   user: "root"
-  password: "root"
+  password: ""
   port: 3306
